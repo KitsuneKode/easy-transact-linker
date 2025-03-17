@@ -5,18 +5,28 @@ import AnimatedBackground from '@/components/AnimatedBackground';
 import { loadMetaKeepSDK } from '@/lib/metakeep';
 
 const Index: React.FC = () => {
-  // Load MetaKeep SDK when the page loads
+  // Load MetaKeep SDK and Web3 when the page loads
   useEffect(() => {
-    const loadSdk = async () => {
+    const loadSDKs = async () => {
       try {
+        // Load MetaKeep SDK
         await loadMetaKeepSDK();
         console.log('MetaKeep SDK loaded successfully');
+        
+        // Load Web3.js
+        if (!window.Web3) {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js';
+          script.async = true;
+          document.head.appendChild(script);
+          console.log('Web3.js loading...');
+        }
       } catch (error) {
-        console.error('Failed to load MetaKeep SDK:', error);
+        console.error('Failed to load dependencies:', error);
       }
     };
     
-    loadSdk();
+    loadSDKs();
   }, []);
 
   return (
