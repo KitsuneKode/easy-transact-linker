@@ -5,7 +5,8 @@ import {
   loadMetaKeepSDK, 
   initializeMetaKeep, 
   getWallet, 
-  executeTransaction 
+  executeTransaction,
+  logTransactionEvent
 } from '@/lib/metakeep';
 import { TransactionDetails } from '@/lib/types';
 import Header from '@/components/Header';
@@ -13,10 +14,10 @@ import TransactionDetailsComponent from '@/components/TransactionDetails';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import { Button } from '@/components/ui/button';
 import { toast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Check } from 'lucide-react';
+import { Loader2, ArrowLeft, Check, AlertTriangle } from 'lucide-react';
 
-// MetaKeep client ID for embedded wallet
-const METAKEEP_CLIENT_ID = 'YOUR_METAKEEP_CLIENT_ID'; // Replace with actual client ID
+// MetaKeep client ID for embedded wallet - Replace with your actual client ID
+const METAKEEP_CLIENT_ID = 'default'; // This is a placeholder, replace with your client ID
 
 const Transaction: React.FC = () => {
   const { txData } = useParams<{ txData: string }>();
@@ -29,8 +30,14 @@ const Transaction: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [metakeep, setMetakeep] = useState<any>(null);
   const [wallet, setWallet] = useState<any>(null);
+  const [sdkLoaded, setSdkLoaded] = useState(false);
   
-  // Decode transaction data from URL
+  // Log page visit for analytics
+  useEffect(() => {
+    logTransactionEvent('transaction_page_visit', { timestamp: new Date().toISOString() });
+  }, []);
+  
+  // Decode transaction data from URL and load SDK
   useEffect(() => {
     const initPage = async () => {
       if (!txData) {
@@ -40,14 +47,25 @@ const Transaction: React.FC = () => {
       }
       
       try {
+        // Log page initialization
+        logTransactionEvent('transaction_page_init', { txData });
+        
         // Load MetaKeep SDK
         await loadMetaKeepSDK();
+        setSdkLoaded(true);
         
         // Decode transaction data
         const decoded = decodeTransactionFromUrl(txData);
         if (!decoded) {
           throw new Error('Failed to decode transaction data');
         }
+        
+        // Log successful decoding
+        logTransactionEvent('transaction_decoded', { 
+          contractAddress: decoded.contractAddress,
+          chainId: decoded.chainId,
+          functionName: decoded.functionName
+        });
         
         setTransaction(decoded);
         
@@ -63,8 +81,10 @@ const Transaction: React.FC = () => {
         }
         
         setMetakeep(metakeepInstance);
+        logTransactionEvent('metakeep_initialized', { chainId: decoded.chainId });
       } catch (err: any) {
         console.error('Error initializing transaction page:', err);
+        logTransactionEvent('transaction_init_error', { error: err.message });
         setError(err.message || 'Failed to load transaction');
       } finally {
         setLoading(false);
@@ -82,6 +102,13 @@ const Transaction: React.FC = () => {
     setError(null);
     
     try {
+      // Log execution attempt
+      logTransactionEvent('transaction_execution_start', { 
+        contractAddress: transaction.contractAddress,
+        chainId: transaction.chainId,
+        functionName: transaction.functionName 
+      });
+      
       // Get wallet if not already connected
       let walletInstance = wallet;
       if (!walletInstance) {
@@ -90,12 +117,18 @@ const Transaction: React.FC = () => {
           throw new Error('Failed to connect wallet');
         }
         setWallet(walletInstance);
+        logTransactionEvent('wallet_connected', { address: walletInstance.address });
       }
       
       // Execute transaction
       const result = await executeTransaction(metakeep, transaction);
       
       console.log('Transaction result:', result);
+      logTransactionEvent('transaction_success', { 
+        txHash: result.transactionHash || result.hash || 'unknown',
+        contractAddress: transaction.contractAddress,
+        functionName: transaction.functionName
+      });
       
       setSuccess(true);
       toast({
@@ -104,6 +137,7 @@ const Transaction: React.FC = () => {
       });
     } catch (err: any) {
       console.error('Transaction execution error:', err);
+      logTransactionEvent('transaction_error', { error: err.message });
       setError(err.message || 'Transaction failed');
       toast({
         title: "Transaction failed",
@@ -120,18 +154,28 @@ const Transaction: React.FC = () => {
     if (!metakeep) return;
     
     try {
+      logTransactionEvent('wallet_connect_attempt', {});
+      
       const walletInstance = await getWallet(metakeep);
       if (!walletInstance) {
         throw new Error('Failed to connect wallet');
       }
       
       setWallet(walletInstance);
+      
+      logTransactionEvent('wallet_connected', { 
+        address: walletInstance.address,
+        chainId: transaction?.chainId 
+      });
+      
       toast({
         title: "Wallet connected",
         description: "Your wallet is now connected",
       });
     } catch (err: any) {
       console.error('Wallet connection error:', err);
+      logTransactionEvent('wallet_connect_error', { error: err.message });
+      
       toast({
         title: "Connection failed",
         description: err.message || "Failed to connect wallet",
@@ -142,6 +186,7 @@ const Transaction: React.FC = () => {
   
   // Go back to home page
   const handleGoBack = () => {
+    logTransactionEvent('navigate_back_to_home', {});
     navigate('/');
   };
 
@@ -171,7 +216,17 @@ const Transaction: React.FC = () => {
           </div>
         ) : error && !transaction ? (
           <div className="glass-panel p-8 text-center">
-            <p className="text-destructive text-lg mb-4">{error}</p>
+            <div className="flex flex-col items-center mb-6">
+              <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
+              <p className="text-destructive text-lg font-medium">{error}</p>
+              
+              {!sdkLoaded && (
+                <div className="mt-4 p-4 bg-destructive/10 rounded-md max-w-md text-sm">
+                  <p className="font-medium mb-2">MetaKeep SDK failed to load</p>
+                  <p>This may be due to a network issue or content blocking in your browser.</p>
+                </div>
+              )}
+            </div>
             <Button onClick={handleGoBack}>Return to Home</Button>
           </div>
         ) : transaction ? (

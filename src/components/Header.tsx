@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { BarChart2 } from 'lucide-react';
 
 const Header: React.FC = () => {
   return (
@@ -17,11 +18,15 @@ const Header: React.FC = () => {
         </span>
       </Link>
       
-      <nav className="hidden md:flex space-x-8">
+      <nav className="flex space-x-8 items-center">
         <Link to="/" className="text-foreground/80 hover:text-primary transition-colors duration-200">
           Home
         </Link>
-        <a href="https://docs.metakeep.xyz/reference/blockchain-sdk-101" target="_blank" rel="noopener noreferrer" className="text-foreground/80 hover:text-primary transition-colors duration-200">
+        <Link to="/analytics" className="text-foreground/80 hover:text-primary transition-colors duration-200 flex items-center gap-1">
+          <BarChart2 className="h-4 w-4" />
+          Analytics
+        </Link>
+        <a href="https://docs.metakeep.xyz/reference/blockchain-sdk-101" target="_blank" rel="noopener noreferrer" className="text-foreground/80 hover:text-primary transition-colors duration-200 hidden md:block">
           Documentation
         </a>
       </nav>

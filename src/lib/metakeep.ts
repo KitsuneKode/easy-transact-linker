@@ -1,3 +1,4 @@
+
 import { TransactionDetails } from './types';
 
 // MetaKeep SDK will be loaded from CDN
@@ -141,16 +142,78 @@ export const decodeTransactionFromUrl = (urlParam: string): TransactionDetails |
 export const loadMetaKeepSDK = () => {
   return new Promise<void>((resolve, reject) => {
     if (window.metakeep) {
+      console.log('MetaKeep SDK already loaded');
       resolve();
       return;
     }
 
+    // Create script element
     const script = document.createElement('script');
-    script.src = 'https://unpkg.com/@metakeep/metakeep-web@latest/dist/metakeep.min.js';
+    script.src = 'https://sdk.metakeep.xyz/dist/metakeep.js';
     script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load MetaKeep SDK'));
     
+    // Set callbacks
+    script.onload = () => {
+      console.log('MetaKeep SDK loaded successfully');
+      resolve();
+    };
+    
+    script.onerror = (error) => {
+      console.error('Error loading MetaKeep SDK:', error);
+      reject(new Error('Failed to load MetaKeep SDK'));
+    };
+    
+    // Append to document
     document.head.appendChild(script);
   });
+};
+
+// Log transaction analytics
+export const logTransactionEvent = (event: string, data: any) => {
+  // Log to analytics service - implementation pending
+  console.log(`[Analytics] ${event}:`, data);
+  
+  // If we had a backend service, we would send this data there
+  try {
+    const analyticsData = {
+      timestamp: new Date().toISOString(),
+      event,
+      data,
+    };
+    
+    // Record event to analytics service
+    recordAnalyticsEvent(analyticsData);
+  } catch (error) {
+    console.error('Failed to log analytics event:', error);
+  }
+};
+
+// Record analytics event to backend
+export const recordAnalyticsEvent = async (data: any) => {
+  try {
+    // This is where we would send data to a backend service
+    // For now, we'll just log to localStorage for demonstration
+    const analytics = JSON.parse(localStorage.getItem('txlinker_analytics') || '[]');
+    analytics.push(data);
+    localStorage.setItem('txlinker_analytics', JSON.stringify(analytics));
+    
+    // In a real implementation, we would use fetch to send to an API
+    // await fetch('/api/analytics', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify(data)
+    // });
+  } catch (error) {
+    console.error('Failed to record analytics event:', error);
+  }
+};
+
+// Get analytics data
+export const getAnalyticsData = () => {
+  try {
+    return JSON.parse(localStorage.getItem('txlinker_analytics') || '[]');
+  } catch (error) {
+    console.error('Failed to get analytics data:', error);
+    return [];
+  }
 };
