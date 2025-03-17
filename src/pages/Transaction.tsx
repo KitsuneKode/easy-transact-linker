@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { decodeTransactionFromUrl, logTransactionEvent } from '@/lib/metakeep';
-import TransactionDetails from '@/components/TransactionDetails';
+import TransactionDetailsComponent from '@/components/TransactionDetails';
 import { TransactionDetails as TransactionDetailsType } from '@/lib/types';
 import Header from '@/components/Header';
 import SimpleWallet from '@/components/SimpleWallet';
@@ -13,7 +13,7 @@ import { toast } from '@/hooks/use-toast';
 
 const Transaction = () => {
   const { txData } = useParams<{ txData: string }>();
-  const [transactionDetails, setTransactionDetails] = useState<TransactionDetails | null>(null);
+  const [transactionDetails, setTransactionDetails] = useState<TransactionDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
