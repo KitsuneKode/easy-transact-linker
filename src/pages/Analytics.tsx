@@ -1,15 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { getAnalyticsData } from '@/lib/metakeep';
 import Header from '@/components/Header';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-// Colors for charts
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+import StatsCard from '@/components/analytics/StatsCard';
+import ActivityChart from '@/components/analytics/ActivityChart';
+import RecentEvents from '@/components/analytics/RecentEvents';
 
 const Analytics: React.FC = () => {
   const [analytics, setAnalytics] = useState<any[]>([]);
@@ -96,6 +93,18 @@ const Analytics: React.FC = () => {
         data: item.data
       }));
   };
+
+  const successRate = transactionStats.length > 0
+    ? Math.round((transactionStats.find(s => s.name === 'success')?.value || 0) /
+      ((transactionStats.find(s => s.name === 'success')?.value || 0) +
+       (transactionStats.find(s => s.name === 'error')?.value || 0)) * 100)
+    : 0;
+
+  const activeChains = Array.from(new Set(
+    analytics
+      .filter(item => item.data?.chainId)
+      .map(item => item.data.chainId)
+  ));
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -111,43 +120,23 @@ const Analytics: React.FC = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
+          <StatsCard 
+            title="Total Events" 
+            value={analytics.length}
+            description="Total tracked events"
+          />
+          <StatsCard 
+            title="Success Rate" 
+            value={`${successRate}%`}
+            description="Transaction success rate"
+          />
+          <Card className="overflow-hidden">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xl">Total Events</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold">{analytics.length}</div>
-              <p className="text-muted-foreground text-sm">Total tracked events</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xl">Success Rate</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold">
-                {transactionStats.length > 0 
-                  ? Math.round((transactionStats.find(s => s.name === 'success')?.value || 0) / 
-                    ((transactionStats.find(s => s.name === 'success')?.value || 0) + 
-                     (transactionStats.find(s => s.name === 'error')?.value || 0)) * 100) + '%'
-                  : '0%'}
-              </div>
-              <p className="text-muted-foreground text-sm">Transaction success rate</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xl">Active Chains</CardTitle>
+              <CardTitle className="text-lg">Active Chains</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {Array.from(new Set(
-                  analytics
-                    .filter(item => item.data?.chainId)
-                    .map(item => item.data.chainId)
-                )).map((chainId, index) => (
+                {activeChains.map((chainId, index) => (
                   <Badge key={index} variant="outline" className="bg-primary/10">
                     Chain ID: {chainId}
                   </Badge>
@@ -164,92 +153,25 @@ const Analytics: React.FC = () => {
             <TabsTrigger value="events">Recent Events</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="overview" className="animate-slide-up">
-            <Card>
-              <CardHeader>
-                <CardTitle>Hourly Activity</CardTitle>
-                <CardDescription>Events tracked by hour of day</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={hourlyActivity}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="hour" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#8884d8" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="overview" className="space-y-6">
+            <ActivityChart data={hourlyActivity} />
           </TabsContent>
           
-          <TabsContent value="transactions" className="space-y-6 animate-slide-up">
-            <Card>
-              <CardHeader>
-                <CardTitle>Transaction Status</CardTitle>
-                <CardDescription>Success vs. error statistics</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={transactionStats}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {transactionStats.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="transactions" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <StatsCard 
+                title="Successful Transactions" 
+                value={transactionStats.find(s => s.name === 'success')?.value || 0}
+              />
+              <StatsCard 
+                title="Failed Transactions" 
+                value={transactionStats.find(s => s.name === 'error')?.value || 0}
+              />
+            </div>
           </TabsContent>
           
-          <TabsContent value="events" className="animate-slide-up">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Events</CardTitle>
-                <CardDescription>Last 10 tracked events</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {getRecentEvents().map((event) => (
-                    <div key={event.id} className="p-3 border rounded-md">
-                      <div className="flex justify-between items-start mb-1">
-                        <Badge variant="outline" className="bg-primary/5">
-                          {event.event.replace(/_/g, ' ')}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {event.timestamp}
-                        </span>
-                      </div>
-                      <pre className="text-xs mt-2 bg-muted p-2 rounded overflow-x-auto">
-                        {JSON.stringify(event.data, null, 2)}
-                      </pre>
-                    </div>
-                  ))}
-                  
-                  {getRecentEvents().length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No events recorded yet
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="events">
+            <RecentEvents events={getRecentEvents()} />
           </TabsContent>
         </Tabs>
       </main>
