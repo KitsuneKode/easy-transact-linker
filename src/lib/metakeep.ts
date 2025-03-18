@@ -3,8 +3,8 @@ import { TransactionDetails } from './types';
 // MetaKeep SDK will be loaded from CDN
 declare global {
   interface Window {
-    metakeep: any;
-    Web3: any;
+    metakeep;
+    Web3;
   }
 }
 
@@ -61,7 +61,7 @@ export const initializeMetaKeep = async (clientId: string, chainId: number, rpcU
 };
 
 // Get the user's wallet
-export const getWallet = async (metakeep: any) => {
+export const getWallet = async (metakeep) => {
   try {
     const wallet = await metakeep.connect();
     return wallet;
@@ -83,7 +83,7 @@ export const parseABI = (abiString: string) => {
 };
 
 // Get contract functions from ABI
-export const getContractFunctions = (abi: any[]) => {
+export const getContractFunctions = (abi) => {
   return abi.filter((item) => item.type === 'function');
 };
 
@@ -106,7 +106,7 @@ export const decodeTransactionFromUrl = (urlParam: string): TransactionDetails |
 };
 
 // Log transaction analytics
-export const logTransactionEvent = (event: string, data: any) => {
+export const logTransactionEvent = (event: string, data) => {
   console.log(`[Analytics] ${event}:`, data);
   
   try {
@@ -124,7 +124,7 @@ export const logTransactionEvent = (event: string, data: any) => {
 };
 
 // Record analytics event to backend
-export const recordAnalyticsEvent = async (data: any) => {
+export const recordAnalyticsEvent = async (data) => {
   try {
     // Store in localStorage for demonstration
     const analytics = JSON.parse(localStorage.getItem('txlinker_analytics') || '[]');
