@@ -4,6 +4,7 @@ import Header from '@/components/Header';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import StatsCard from '@/components/analytics/StatsCard';
 import ActivityChart from '@/components/analytics/ActivityChart';
 import RecentEvents from '@/components/analytics/RecentEvents';
@@ -15,36 +16,27 @@ const Analytics: React.FC = () => {
   const [hourlyActivity, setHourlyActivity] = useState<{ hour: string; count: number }[]>([]);
   
   useEffect(() => {
-    // Load analytics data
     const data = getAnalyticsData();
     setAnalytics(data);
     
-    // Process analytics data
     processAnalyticsData(data);
   }, []);
   
   const processAnalyticsData = (data: any[]) => {
-    // Count page visits by type
     const visitCounts: Record<string, number> = {};
-    
-    // Count transaction successes and failures
     const txCounts = {
       success: 0,
       error: 0,
       pending: 0,
     };
-    
-    // Count hourly activity
     const hourlyData: Record<string, number> = {};
     
     data.forEach(item => {
-      // Page visits
       if (item.event.includes('page_visit') || item.event.includes('page_init')) {
         const eventType = item.event;
         visitCounts[eventType] = (visitCounts[eventType] || 0) + 1;
       }
       
-      // Transaction stats
       if (item.event === 'transaction_success') {
         txCounts.success += 1;
       } else if (item.event === 'transaction_error') {
@@ -53,7 +45,6 @@ const Analytics: React.FC = () => {
         txCounts.pending += 1;
       }
       
-      // Hourly activity
       if (item.timestamp) {
         const date = new Date(item.timestamp);
         const hour = date.getHours();
@@ -62,7 +53,6 @@ const Analytics: React.FC = () => {
       }
     });
     
-    // Convert to arrays for charts
     const pageVisitsArray = Object.entries(visitCounts).map(([name, value]) => ({
       name: name.replace('_', ' '),
       value
@@ -84,8 +74,8 @@ const Analytics: React.FC = () => {
   
   const getRecentEvents = () => {
     return analytics
-      .slice(-10) // Get last 10 events
-      .reverse()  // Most recent first
+      .slice(-10)
+      .reverse()
       .map((item, index) => ({
         id: index,
         event: item.event,
