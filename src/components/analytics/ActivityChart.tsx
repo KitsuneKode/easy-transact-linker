@@ -10,31 +10,36 @@ interface ActivityChartProps {
 }
 
 const ActivityChart = ({ data, isLoading = false }: ActivityChartProps) => {
-  // Format dates for display
+  // Format data for display
   const formattedData = data.map(item => {
+    // For time strings that are already formatted (like "3:00 PM")
+    if (typeof item.hour === 'string' && 
+        (item.hour.includes('AM') || item.hour.includes('PM') || 
+         item.hour.includes(':') || /^\d{1,2}(:\d{2})?$/.test(item.hour))) {
+      return {
+        ...item,
+        formattedHour: item.hour
+      };
+    }
+    
+    // For ISO date strings
     try {
-      // Try to parse as ISO date first
       const date = new Date(item.hour);
-      
       if (!isNaN(date.getTime())) {
         return {
           ...item,
           formattedHour: format(date, "h:mm a")
         };
       }
-      
-      // If not an ISO date, just use the original
-      return {
-        ...item,
-        formattedHour: item.hour
-      };
     } catch (e) {
-      console.error("Date parsing error:", e);
-      return {
-        ...item,
-        formattedHour: item.hour
-      };
+      // Error parsing date, fall back to original value
     }
+    
+    // Default case, just use the original value
+    return {
+      ...item,
+      formattedHour: item.hour
+    };
   });
 
   return (

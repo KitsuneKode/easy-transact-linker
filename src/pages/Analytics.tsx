@@ -22,16 +22,25 @@ const Analytics: React.FC = () => {
       setIsLoading(true);
       try {
         const data = await getAnalyticsData();
-        console.log('Analytics data:', data);
         setAnalytics(data);
         
-        // Format data properly for the hourly chart
+        // Convert the data into the expected format for charts with better time formatting
         const hourlyData = data.map((item: any) => {
-          // Use the timeKey directly which should be in ISO format
-          return {
-            hour: item.timeKey,
-            count: item.count
-          };
+          try {
+            const date = new Date(item.timeKey);
+            return {
+              hour: !isNaN(date.getTime()) 
+                ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : item.displayTime || item.timeKey,
+              count: item.count
+            };
+          } catch (e) {
+            // If date parsing fails, use the display time or original timeKey
+            return {
+              hour: item.displayTime || item.timeKey,
+              count: item.count
+            };
+          }
         });
         
         setHourlyActivity(hourlyData);
