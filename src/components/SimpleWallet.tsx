@@ -132,11 +132,7 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
       const maxpriogas = transactionDetails?.functionInputs.maxpriogas;
       
       const web3Accounts = await metaKeep.getWallet();
-      console.log(web3Accounts);
-      console.log(web3Accounts.wallet.ethAddress);
-      console.log(
-        web3Accounts['wallet']['ethAddress']
-      );
+
       
       const nonceValue = await web3.eth.getTransactionCount(
         web3Accounts['wallet']['ethAddress'],
@@ -160,6 +156,8 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
 
       console.log(txObj);
       const result = await metaKeep.signTransaction(txObj, 'reason');
+      
+      console.log(result);
       
       const safeResult = safeBigIntToJSON(result);
       
