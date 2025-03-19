@@ -127,6 +127,11 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
       
       const web3Accounts = await metaKeep.getWallet();
       console.log(web3Accounts);
+      console.log(web3Accounts.wallet.ethAddress);
+      console.log(
+        web3Accounts['wallet']['ethAddress']
+
+      )
       
       const nonce = await web3.eth.getTransactionCount(
         web3Accounts['wallet']['ethAddress'],
