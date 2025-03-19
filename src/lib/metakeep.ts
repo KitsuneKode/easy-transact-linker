@@ -1,76 +1,5 @@
 import { TransactionDetails } from './types';
 
-// MetaKeep SDK will be loaded from CDN
-declare global {
-  interface Window {
-    metakeep;
-    Web3;
-  }
-}
-
-// Load MetaKeep SDK from CDN
-export const loadMetaKeepSDK = () => {
-  return new Promise<void>((resolve, reject) => {
-    if (window.metakeep) {
-      console.log('MetaKeep SDK already loaded');
-      resolve();
-      return;
-    }
-
-    // Create script element
-    const script = document.createElement('script');
-    script.src = 'https://sdk.metakeep.xyz/dist/metakeep.js';
-    script.async = true;
-    
-    // Set callbacks
-    script.onload = () => {
-      console.log('MetaKeep SDK loaded successfully');
-      resolve();
-    };
-    
-    script.onerror = (error) => {
-      console.error('Error loading MetaKeep SDK:', error);
-      reject(new Error('Failed to load MetaKeep SDK'));
-    };
-    
-    // Append to document
-    document.head.appendChild(script);
-  });
-};
-
-// Initialize MetaKeep SDK
-export const initializeMetaKeep = async (clientId: string, chainId: number, rpcUrl: string) => {
-  if (!window.metakeep) {
-    console.error('MetaKeep SDK not loaded');
-    return null;
-  }
-
-  try {
-    const metakeep = await window.metakeep.init({
-      clientId,
-      chain: {
-        id: chainId,
-        rpcUrl,
-      },
-    });
-    return metakeep;
-  } catch (error) {
-    console.error('Failed to initialize MetaKeep SDK:', error);
-    return null;
-  }
-};
-
-// Get the user's wallet
-export const getWallet = async (metakeep) => {
-  try {
-    const wallet = await metakeep.connect();
-    return wallet;
-  } catch (error) {
-    console.error('Failed to connect wallet:', error);
-    return null;
-  }
-};
-
 // Parse ABI string to JSON
 export const parseABI = (abiString: string) => {
   try {
@@ -95,7 +24,9 @@ export const createShareableLink = (transactionDetails: TransactionDetails) => {
 };
 
 // Decode transaction from URL
-export const decodeTransactionFromUrl = (urlParam: string): TransactionDetails | null => {
+export const decodeTransactionFromUrl = (
+  urlParam: string
+): TransactionDetails | null => {
   try {
     const decoded = JSON.parse(atob(decodeURIComponent(urlParam)));
     return decoded as TransactionDetails;
@@ -108,16 +39,19 @@ export const decodeTransactionFromUrl = (urlParam: string): TransactionDetails |
 // Log transaction analytics
 export const logTransactionEvent = (event: string, data) => {
   console.log(`[Analytics] ${event}:`, data);
-  
+
   try {
     const analyticsData = {
       timestamp: new Date().toISOString(),
       event,
       data,
     };
-    
+
     // Record event to analytics service
     recordAnalyticsEvent(analyticsData);
+
+    // Also log page load events to backend
+    recordPageLoadToBackend(analyticsData);
   } catch (error) {
     console.error('Failed to log analytics event:', error);
   }
@@ -126,21 +60,62 @@ export const logTransactionEvent = (event: string, data) => {
 // Record analytics event to backend
 export const recordAnalyticsEvent = async (data) => {
   try {
-    // Store in localStorage for demonstration
-    const analytics = JSON.parse(localStorage.getItem('txlinker_analytics') || '[]');
-    analytics.push(data);
-    localStorage.setItem('txlinker_analytics', JSON.stringify(analytics));
+    await fetch(
+      `${
+        process.env.REACT_APP_API_URL || 'http://localhost:3001'
+      }/api/analytics/event`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          event: data.event,
+          data: data.data,
+        }),
+        keepalive: true,
+      }
+    );
   } catch (error) {
-    console.error('Failed to record analytics event:', error);
+    console.error('Failed to record analytics event to backend:', error);
   }
 };
 
-// Get analytics data
-export const getAnalyticsData = () => {
+// Record page load event specifically
+export const recordPageLoadToBackend = async (data) => {
   try {
-    return JSON.parse(localStorage.getItem('txlinker_analytics') || '[]');
+    await fetch(
+      `${
+        process.env.REACT_APP_API_URL || 'http://localhost:3001'
+      }/api/analytics/pageload`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+        keepalive: true,
+      }
+    );
   } catch (error) {
-    console.error('Failed to get analytics data:', error);
+    console.error('Failed to record page load to backend:', error);
+  }
+};
+
+// Get analytics data from backend API
+export const getAnalyticsData = async () => {
+  try {
+    const response = await fetch(
+      `${
+        process.env.REACT_APP_API_URL || 'http://localhost:3001'
+      }/api/analytics/pageloads`
+    );
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to get analytics data from backend:', error);
     return [];
   }
 };

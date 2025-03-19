@@ -25,6 +25,8 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
   const [response, setResponse] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [amount, setAmount] = useState(0);
+  const [toAddress, setToAddress] = useState('');
   const [metaKeep, setMetaKeep] = useState(null);
   const [web3, setWeb3] = useState(null);
 
@@ -36,6 +38,7 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
 
         const metakeepInstance = new MetaKeep({
           appId: '9cc98bca-da35-4da8-8f10-655b3e51cb9e',
+
           chainId,
           environment: 'dev',
           rpcNodeUrls: { [chainId]: getRpcUrlForChain(chainId) },
@@ -54,6 +57,7 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
         console.log('MetaKeep SDK initialized successfully');
       } catch (error) {
         console.error('Failed to initialize MetaKeep SDK:', error);
+
         setError('Failed to initialize wallet');
       }
     };
@@ -93,8 +97,8 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
 
     try {
       const chainId = transactionDetails?.chainId;
-      const value = transactionDetails?.functionInputs.wad;
-      const toAddress = transactionDetails?.functionInputs.dst;
+      // const value = transactionDetails?.functionInputs.wad;
+      // const toAddress = transactionDetails?.functionInputs.dst;
       const gas = transactionDetails?.functionInputs.gas;
       const maxgas = transactionDetails?.functionInputs.maxgas;
       const maxpriogas = transactionDetails?.functionInputs.maxpriogas;
@@ -110,7 +114,7 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
         type: 2,
         from: web3Accounts['wallets']['ethAddress'],
         to: toAddress,
-        value: web3.utils.toWei(value.toString(), 'ether'),
+        value: web3.utils.toWei(amount.toString(), 'ether'),
         nonce,
         data: '0x0123456789',
         gas,
@@ -162,8 +166,7 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
             <span className="font-medium">Connected:</span> {address}
           </div>
         )} */}
-
-        {/* <div className="space-y-2">
+        <div className="space-y-2">
           <Label htmlFor="to-address">Recipient Address</Label>
           <Input
             id="to-address"
@@ -171,9 +174,8 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
             value={toAddress}
             onChange={(e) => setToAddress(e.target.value)}
           />
-        </div> */}
-
-        {/* <div className="space-y-2">
+        </div>
+        <div className="space-y-2">
           <Label htmlFor="amount">Amount (in ETH/MATIC)</Label>
           <Input
             id="amount"
@@ -182,16 +184,15 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
             min="0"
             placeholder="0.01"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => setAmount(parseInt(e.target.value))}
           />
-        </div> */}
-
+        </div>
+        
         {error && (
           <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm">
             {error}
           </div>
         )}
-
         {response && (
           <div className="p-3 bg-secondary rounded-md text-xs font-mono overflow-auto max-h-40">
             {response}
