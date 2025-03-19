@@ -37,7 +37,22 @@ export const decodeTransactionFromUrl = (
   urlParam: string
 ): TransactionDetails | null => {
   try {
-    const decoded = JSON.parse(atob(decodeURIComponent(urlParam)));
+    // Check if the urlParam is actually the URL pattern parameter
+    if (urlParam === ':txData') {
+      console.warn('Invalid URL parameter: :txData');
+      return null;
+    }
+    
+    // Some URLs might have extra slashes or encoding issues
+    const cleanedParam = decodeURIComponent(urlParam);
+    const decoded = JSON.parse(atob(cleanedParam));
+    
+    // Validate the decoded object has required fields
+    if (!decoded.contractAddress || !decoded.chainId || !decoded.functionName) {
+      console.warn('Decoded transaction missing required fields');
+      return null;
+    }
+    
     return decoded as TransactionDetails;
   } catch (error) {
     console.error('Failed to decode transaction from URL:', error);
@@ -130,7 +145,12 @@ export const getAnalyticsData = async () => {
     }
     
     const data = await response.json();
-    return data;
+    
+    // Format the timestamps properly
+    return data.map((item: any) => ({
+      ...item,
+      timeKey: new Date(item.timeKey).toISOString()
+    }));
   } catch (error) {
     console.error('Failed to get analytics data from backend:', error);
     return [];

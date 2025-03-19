@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { decodeTransactionFromUrl, logTransactionEvent, logPageView } from '@/lib/metakeep';
@@ -10,19 +10,28 @@ import { TransactionDetails as TransactionDetailsType } from '@/lib/types';
 import Header from '@/components/Header';
 import SimpleWallet from '@/components/SimpleWallet';
 import { toast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Transaction = () => {
   const { txData } = useParams<{ txData: string }>();
   const [transactionDetails, setTransactionDetails] = useState<TransactionDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Log page view for the transaction page
     logPageView('transaction_page');
     
     if (!txData) {
-      setError('Transaction data not found');
+      setError('Transaction data not found in URL');
+      setLoading(false);
+      return;
+    }
+
+    // Check if the txData is the URL pattern parameter
+    if (txData === ':txData') {
+      setError('Invalid transaction URL. Please check your link.');
       setLoading(false);
       return;
     }
@@ -45,7 +54,7 @@ const Transaction = () => {
       
     } catch (err) {
       console.error('Error decoding transaction:', err);
-      setError('Invalid transaction data');
+      setError('Invalid transaction data. This link appears to be corrupted or malformed.');
       
       // Log error event
       logTransactionEvent('transaction_decode_error', {
@@ -95,22 +104,40 @@ const Transaction = () => {
             </CardContent>
           </Card>
         ) : error ? (
-          <Card className="border-destructive/50">
-            <CardHeader>
-              <CardTitle>Error</CardTitle>
-              <CardDescription>
-                There was a problem with this transaction link
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p>{error}</p>
-            </CardContent>
-            <CardFooter>
-              <Button asChild>
-                <Link to="/">Return Home</Link>
-              </Button>
-            </CardFooter>
-          </Card>
+          <div className="space-y-6">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Error Loading Transaction</AlertTitle>
+              <AlertDescription>
+                {error}
+              </AlertDescription>
+            </Alert>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Transaction Error</CardTitle>
+                <CardDescription>
+                  There was a problem with this transaction link
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4">The transaction data could not be loaded. This may be due to one of the following reasons:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>The link was incorrectly copied</li>
+                  <li>The link has expired</li>
+                  <li>The transaction data is in an invalid format</li>
+                </ul>
+              </CardContent>
+              <CardFooter className="flex gap-4">
+                <Button asChild>
+                  <Link to="/">Return Home</Link>
+                </Button>
+                <Button variant="outline" onClick={() => navigate(-1)}>
+                  Go Back
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
         ) : transactionDetails && (
           <div className="grid md:grid-cols-2 gap-6 animate-fade-in">
             <TransactionDetailsComponent transaction={transactionDetails} />
