@@ -22,17 +22,21 @@ const Analytics: React.FC = () => {
       setIsLoading(true);
       try {
         const data = await getAnalyticsData();
+        console.log('Analytics data:', data);
         setAnalytics(data);
         
-        // Convert the data into the expected format for charts
-        const hourlyData = data.map((item: any) => ({
-          hour: new Date(item.timeKey).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          count: item.count
-        }));
+        // Format data properly for the hourly chart
+        const hourlyData = data.map((item: any) => {
+          // Use the timeKey directly which should be in ISO format
+          return {
+            hour: item.timeKey,
+            count: item.count
+          };
+        });
         
         setHourlyActivity(hourlyData);
         
-        // Set mock data for now until we have real transaction data
+        // Set mock data for transaction stats
         setTransactionStats([
           { name: 'success', value: 24 },
           { name: 'error', value: 3 },
@@ -41,6 +45,8 @@ const Analytics: React.FC = () => {
         
       } catch (error) {
         console.error('Failed to fetch analytics data:', error);
+        // Set empty data in case of error
+        setHourlyActivity([]);
       } finally {
         setIsLoading(false);
       }
