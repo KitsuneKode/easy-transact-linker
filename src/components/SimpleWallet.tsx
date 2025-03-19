@@ -105,6 +105,12 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
     }
   };
 
+  const safeBigIntToJSON = (obj: any): any => {
+    return JSON.parse(JSON.stringify(obj, (_, value) => 
+      typeof value === 'bigint' ? value.toString() : value
+    ));
+  };
+
   const sendTransaction = async () => {
     setIsLoading(true);
     setError(null);
@@ -118,8 +124,8 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
     });
 
     try {
-      const to= transactionDetails?.functionInputs._to;
-      const value= transactionDetails?.functionInputs._value;
+      const to = transactionDetails?.functionInputs._to;
+      const value = transactionDetails?.functionInputs._value;
       const chainId = transactionDetails?.chainId;
       const gas = transactionDetails?.functionInputs.gas;
       const maxgas = transactionDetails?.functionInputs.maxgas;
@@ -130,43 +136,45 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
       console.log(web3Accounts.wallet.ethAddress);
       console.log(
         web3Accounts['wallet']['ethAddress']
-
-      )
+      );
       
-      const nonce = await web3.eth.getTransactionCount(
+      const nonceValue = await web3.eth.getTransactionCount(
         web3Accounts['wallet']['ethAddress'],
         'latest'
       );
+      
+      const nonce = Number(nonceValue);
 
       const txObj = {
         type: 2,
         from: web3Accounts['wallet']['ethAddress'],
         to,
-        value: web3.utils.toWei(value.toString(), 'ether'),
+        value: value,
         nonce,
         data: '0x0123456789',
-        gas,
-        maxFeePerGas: maxgas,
-        maxPriorityFeePerGas: maxpriogas,
+        gas: Number(gas),
+        maxFeePerGas: Number(maxgas),
+        maxPriorityFeePerGas: Number(maxpriogas),
         chainId,
       };
 
       console.log(txObj);
       const result = await metaKeep.signTransaction(txObj, 'reason');
-
-      setResponse(JSON.stringify(result, null, 2));
       
-      // Log successful transaction
+      const safeResult = safeBigIntToJSON(result);
+      
+      setResponse(JSON.stringify(safeResult, null, 2));
+      
       logTransactionEvent('transaction_success', {
         to,
         value,
         chainId: transactionDetails?.chainId,
-        transactionHash: result.transactionHash
+        transactionHash: safeResult.transactionHash
       });
       
       toast({
         title: 'Transaction sent',
-        description: `Transaction hash: ${result.transactionHash.substring(
+        description: `Transaction hash: ${safeResult.transactionHash.substring(
           0,
           10
         )}...`,
@@ -175,10 +183,9 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
       console.error('Transaction error:', error);
       setError(error.message || 'Transaction failed');
       
-      // Log transaction error
       logTransactionEvent('transaction_error', {
         to: transactionDetails?.functionInputs._to,
-      value: transactionDetails?.functionInputs._value,
+        value: transactionDetails?.functionInputs._value,
         chainId: transactionDetails?.chainId,
         error: (error as Error).message
       });
