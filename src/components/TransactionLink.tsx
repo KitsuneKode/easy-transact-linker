@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Copy } from 'lucide-react';
+import { logTransactionEvent } from '@/lib/metakeep';
 
 interface TransactionLinkProps {
   link: string;
@@ -15,6 +16,13 @@ const TransactionLink: React.FC<TransactionLinkProps> = ({ link }) => {
     setCopying(true);
     try {
       await navigator.clipboard.writeText(link);
+      
+      // Log the link copy event
+      logTransactionEvent('transaction_link_copied', {
+        link: link,
+        timestamp: new Date().toISOString()
+      });
+      
       toast({
         title: "Link copied!",
         description: "Transaction link copied to clipboard",

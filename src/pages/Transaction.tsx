@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { decodeTransactionFromUrl, logTransactionEvent } from '@/lib/metakeep';
+import { decodeTransactionFromUrl, logTransactionEvent, logPageView } from '@/lib/metakeep';
 import TransactionDetailsComponent from '@/components/TransactionDetails';
 import { TransactionDetails as TransactionDetailsType } from '@/lib/types';
 import Header from '@/components/Header';
@@ -18,6 +18,9 @@ const Transaction = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Log page view for the transaction page
+    logPageView('transaction_page');
+    
     if (!txData) {
       setError('Transaction data not found');
       setLoading(false);
@@ -32,7 +35,7 @@ const Transaction = () => {
       
       setTransactionDetails(decoded);
       
-      // Log analytics event
+      // Log transaction page view with specific transaction details
       logTransactionEvent('transaction_page_view', {
         contractAddress: decoded.contractAddress,
         chainId: decoded.chainId,
@@ -43,6 +46,13 @@ const Transaction = () => {
     } catch (err) {
       console.error('Error decoding transaction:', err);
       setError('Invalid transaction data');
+      
+      // Log error event
+      logTransactionEvent('transaction_decode_error', {
+        error: (err as Error).message,
+        txData: txData
+      });
+      
       toast({
         title: "Error",
         description: "This transaction link appears to be invalid",

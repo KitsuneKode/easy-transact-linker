@@ -1,3 +1,4 @@
+
 import { TransactionDetails } from './types';
 
 // Parse ABI string to JSON
@@ -20,6 +21,14 @@ export const getContractFunctions = (abi) => {
 export const createShareableLink = (transactionDetails: TransactionDetails) => {
   const baseUrl = window.location.origin;
   const txData = encodeURIComponent(btoa(JSON.stringify(transactionDetails)));
+  
+  // Log analytics for link creation
+  logTransactionEvent('transaction_link_created', {
+    contractAddress: transactionDetails.contractAddress,
+    chainId: transactionDetails.chainId,
+    functionName: transactionDetails.functionName,
+  });
+  
   return `${baseUrl}/transaction/${txData}`;
 };
 
@@ -36,8 +45,27 @@ export const decodeTransactionFromUrl = (
   }
 };
 
-// Log transaction analytics
-export const logTransactionEvent = (event: string, data) => {
+// Log page view to track user activity
+export const logPageView = (pageName: string, additionalData = {}) => {
+  console.log(`[Analytics] Page View: ${pageName}`);
+  
+  try {
+    const pageViewData = {
+      timestamp: new Date().toISOString(),
+      page: pageName,
+      path: window.location.pathname,
+      ...additionalData,
+    };
+    
+    // Record page load to backend
+    recordPageLoadToBackend(pageViewData);
+  } catch (error) {
+    console.error('Failed to log page view:', error);
+  }
+};
+
+// Log transaction event for analytics
+export const logTransactionEvent = (event: string, data: any) => {
   console.log(`[Analytics] ${event}:`, data);
 
   try {
@@ -49,54 +77,43 @@ export const logTransactionEvent = (event: string, data) => {
 
     // Record event to analytics service
     recordAnalyticsEvent(analyticsData);
-
-    // Also log page load events to backend
-    recordPageLoadToBackend(analyticsData);
   } catch (error) {
     console.error('Failed to log analytics event:', error);
   }
 };
 
 // Record analytics event to backend
-export const recordAnalyticsEvent = async (data) => {
+export const recordAnalyticsEvent = async (data: any) => {
   try {
-    await fetch(
-      `${
-        process.env.REACT_APP_API_URL || 'http://localhost:3001'
-      }/api/analytics/event`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          event: data.event,
-          data: data.data,
-        }),
-        keepalive: true,
-      }
-    );
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    await fetch(`${apiUrl}/api/analytics/event`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        event: data.event,
+        data: data.data,
+      }),
+      keepalive: true,
+    });
   } catch (error) {
     console.error('Failed to record analytics event to backend:', error);
   }
 };
 
 // Record page load event specifically
-export const recordPageLoadToBackend = async (data) => {
+export const recordPageLoadToBackend = async (data: any) => {
   try {
-    await fetch(
-      `${
-        process.env.REACT_APP_API_URL || 'http://localhost:3001'
-      }/api/analytics/pageload`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-        keepalive: true,
-      }
-    );
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    await fetch(`${apiUrl}/api/analytics/pageload`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+      keepalive: true,
+    });
   } catch (error) {
     console.error('Failed to record page load to backend:', error);
   }
@@ -105,15 +122,15 @@ export const recordPageLoadToBackend = async (data) => {
 // Get analytics data from backend API
 export const getAnalyticsData = async () => {
   try {
-    const response = await fetch(
-      `${
-        process.env.REACT_APP_API_URL || 'http://localhost:3001'
-      }/api/analytics/pageloads`
-    );
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const response = await fetch(`${apiUrl}/api/analytics/pageloads`);
+    
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return await response.json();
+    
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error('Failed to get analytics data from backend:', error);
     return [];

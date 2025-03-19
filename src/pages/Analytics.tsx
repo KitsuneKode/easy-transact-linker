@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { getAnalyticsData } from '@/lib/metakeep';
 import Header from '@/components/Header';
@@ -14,74 +15,53 @@ const Analytics: React.FC = () => {
   const [pageVisits, setPageVisits] = useState<{ name: string; value: number }[]>([]);
   const [transactionStats, setTransactionStats] = useState<{ name: string; value: number }[]>([]);
   const [hourlyActivity, setHourlyActivity] = useState<{ hour: string; count: number }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    const data = getAnalyticsData();
-    setAnalytics(data);
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getAnalyticsData();
+        setAnalytics(data);
+        
+        // Convert the data into the expected format for charts
+        const hourlyData = data.map((item: any) => ({
+          hour: new Date(item.timeKey).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          count: item.count
+        }));
+        
+        setHourlyActivity(hourlyData);
+        
+        // Set mock data for now until we have real transaction data
+        setTransactionStats([
+          { name: 'success', value: 24 },
+          { name: 'error', value: 3 },
+          { name: 'pending', value: 2 }
+        ]);
+        
+      } catch (error) {
+        console.error('Failed to fetch analytics data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    processAnalyticsData(data);
+    fetchData();
+    
+    // Poll for updates every minute
+    const intervalId = setInterval(fetchData, 60000);
+    
+    return () => clearInterval(intervalId);
   }, []);
   
-  const processAnalyticsData = (data: any[]) => {
-    const visitCounts: Record<string, number> = {};
-    const txCounts = {
-      success: 0,
-      error: 0,
-      pending: 0,
-    };
-    const hourlyData: Record<string, number> = {};
-    
-    data.forEach(item => {
-      if (item.event.includes('page_visit') || item.event.includes('page_init')) {
-        const eventType = item.event;
-        visitCounts[eventType] = (visitCounts[eventType] || 0) + 1;
-      }
-      
-      if (item.event === 'transaction_success') {
-        txCounts.success += 1;
-      } else if (item.event === 'transaction_error') {
-        txCounts.error += 1;
-      } else if (item.event === 'transaction_execution_start') {
-        txCounts.pending += 1;
-      }
-      
-      if (item.timestamp) {
-        const date = new Date(item.timestamp);
-        const hour = date.getHours();
-        const hourKey = `${hour}:00`;
-        hourlyData[hourKey] = (hourlyData[hourKey] || 0) + 1;
-      }
-    });
-    
-    const pageVisitsArray = Object.entries(visitCounts).map(([name, value]) => ({
-      name: name.replace('_', ' '),
-      value
-    }));
-    
-    const txStatsArray = Object.entries(txCounts).map(([name, value]) => ({
-      name,
-      value
-    }));
-    
-    const hourlyArray = Object.entries(hourlyData)
-      .map(([hour, count]) => ({ hour, count }))
-      .sort((a, b) => parseInt(a.hour) - parseInt(b.hour));
-    
-    setPageVisits(pageVisitsArray);
-    setTransactionStats(txStatsArray);
-    setHourlyActivity(hourlyArray);
-  };
-  
   const getRecentEvents = () => {
-    return analytics
-      .slice(-10)
-      .reverse()
-      .map((item, index) => ({
-        id: index,
-        event: item.event,
-        timestamp: new Date(item.timestamp).toLocaleString(),
-        data: item.data
-      }));
+    // Return the latest entries from our hourly activity
+    return hourlyActivity.slice(-10).map((item, index) => ({
+      id: index,
+      event: 'page_load',
+      timestamp: item.hour,
+      data: { count: item.count }
+    }));
   };
 
   const successRate = transactionStats.length > 0
@@ -90,11 +70,7 @@ const Analytics: React.FC = () => {
        (transactionStats.find(s => s.name === 'error')?.value || 0)) * 100)
     : 0;
 
-  const activeChains = Array.from(new Set(
-    analytics
-      .filter(item => item.data?.chainId)
-      .map(item => item.data.chainId)
-  ));
+  const activeChains = [1, 137, 80001]; // Mock data for now
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -111,14 +87,16 @@ const Analytics: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <StatsCard 
-            title="Total Events" 
-            value={analytics.length}
-            description="Total tracked events"
+            title="Total Page Loads" 
+            value={hourlyActivity.reduce((sum, item) => sum + item.count, 0)}
+            description="Total tracked page views"
+            isLoading={isLoading}
           />
           <StatsCard 
             title="Success Rate" 
             value={`${successRate}%`}
             description="Transaction success rate"
+            isLoading={isLoading}
           />
           <Card className="overflow-hidden">
             <CardHeader className="pb-2">
@@ -144,7 +122,7 @@ const Analytics: React.FC = () => {
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6">
-            <ActivityChart data={hourlyActivity} />
+            <ActivityChart data={hourlyActivity} isLoading={isLoading} />
           </TabsContent>
           
           <TabsContent value="transactions" className="space-y-6">
@@ -152,16 +130,18 @@ const Analytics: React.FC = () => {
               <StatsCard 
                 title="Successful Transactions" 
                 value={transactionStats.find(s => s.name === 'success')?.value || 0}
+                isLoading={isLoading}
               />
               <StatsCard 
                 title="Failed Transactions" 
                 value={transactionStats.find(s => s.name === 'error')?.value || 0}
+                isLoading={isLoading}
               />
             </div>
           </TabsContent>
           
           <TabsContent value="events">
-            <RecentEvents events={getRecentEvents()} />
+            <RecentEvents events={getRecentEvents()} isLoading={isLoading} />
           </TabsContent>
         </Tabs>
       </main>

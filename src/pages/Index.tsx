@@ -1,9 +1,16 @@
+
 import React, { useEffect } from 'react';
 import Header from '@/components/Header';
 import DeveloperForm from '@/components/DeveloperForm';
 import AnimatedBackground from '@/components/AnimatedBackground';
+import { logPageView } from '@/lib/metakeep';
 
 const Index: React.FC = () => {
+  // Log page view when component mounts
+  useEffect(() => {
+    logPageView('home_page');
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col">
       <AnimatedBackground />

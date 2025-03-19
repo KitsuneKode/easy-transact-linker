@@ -12,6 +12,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { MetaKeep } from 'metakeep';
 import Web3, { Address } from 'web3';
+import { logTransactionEvent } from '@/lib/metakeep';
 
 interface SimpleWalletProps {
   transactionDetails?: {
@@ -29,6 +30,7 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
   const [toAddress, setToAddress] = useState('');
   const [metaKeep, setMetaKeep] = useState(null);
   const [web3, setWeb3] = useState(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   // Initialize MetaKeep SDK
   useEffect(() => {
@@ -38,7 +40,6 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
 
         const metakeepInstance = new MetaKeep({
           appId: '9cc98bca-da35-4da8-8f10-655b3e51cb9e',
-
           chainId,
           environment: 'dev',
           rpcNodeUrls: { [chainId]: getRpcUrlForChain(chainId) },
@@ -46,19 +47,35 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
 
         setMetaKeep(metakeepInstance);
 
-        console.log('Initiazing MetaKeep Web3 provider');
+        console.log('Initializing MetaKeep Web3 provider');
         const web3Provider = await metakeepInstance.ethereum;
         const web3Instance = new Web3(web3Provider);
 
         const accounts = await web3Instance.eth.getAccounts();
         console.log(accounts, 'accounts');
+        
+        if (accounts && accounts.length > 0) {
+          setWalletAddress(accounts[0]);
+          
+          // Log wallet connection event
+          logTransactionEvent('wallet_connected', {
+            address: accounts[0],
+            chainId: chainId
+          });
+        }
+        
         setWeb3(web3Instance);
 
         console.log('MetaKeep SDK initialized successfully');
       } catch (error) {
         console.error('Failed to initialize MetaKeep SDK:', error);
-
         setError('Failed to initialize wallet');
+        
+        // Log wallet initialization error
+        logTransactionEvent('wallet_init_error', {
+          error: (error as Error).message,
+          chainId: transactionDetails?.chainId
+        });
       }
     };
 
@@ -95,16 +112,22 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
     setError(null);
     setResponse(null);
 
+    // Log transaction execution start
+    logTransactionEvent('transaction_execution_start', {
+      toAddress,
+      amount,
+      chainId: transactionDetails?.chainId
+    });
+
     try {
       const chainId = transactionDetails?.chainId;
-      // const value = transactionDetails?.functionInputs.wad;
-      // const toAddress = transactionDetails?.functionInputs.dst;
       const gas = transactionDetails?.functionInputs.gas;
       const maxgas = transactionDetails?.functionInputs.maxgas;
       const maxpriogas = transactionDetails?.functionInputs.maxpriogas;
-      console.error('1');
+      
       const web3Accounts = await metaKeep.getWallet();
-      console.error(web3Accounts);
+      console.log(web3Accounts);
+      
       const nonce = await web3.eth.getTransactionCount(
         web3Accounts['wallets']['ethAddress'],
         'latest'
@@ -126,6 +149,15 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
       const result = await metaKeep.signTransaction(txObj, 'reason');
 
       setResponse(JSON.stringify(result, null, 2));
+      
+      // Log successful transaction
+      logTransactionEvent('transaction_success', {
+        toAddress,
+        amount,
+        chainId: transactionDetails?.chainId,
+        transactionHash: result.transactionHash
+      });
+      
       toast({
         title: 'Transaction sent',
         description: `Transaction hash: ${result.transactionHash.substring(
@@ -136,6 +168,15 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
     } catch (error) {
       console.error('Transaction error:', error);
       setError(error.message || 'Transaction failed');
+      
+      // Log transaction error
+      logTransactionEvent('transaction_error', {
+        toAddress,
+        amount,
+        chainId: transactionDetails?.chainId,
+        error: (error as Error).message
+      });
+      
       toast({
         title: 'Transaction failed',
         description: error.message || 'Failed to send transaction',
@@ -153,19 +194,12 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* {!address ? (
-          <Button
-            onClick={connectWallet}
-            className="w-full"
-            disabled={isLoading || !metaKeep}
-          >
-            {isLoading ? 'Connecting...' : 'Connect Wallet'}
-          </Button>
-        ) : (
+        {walletAddress && (
           <div className="bg-secondary p-3 rounded-md text-sm break-all">
-            <span className="font-medium">Connected:</span> {address}
+            <span className="font-medium">Connected:</span> {walletAddress}
           </div>
-        )} */}
+        )}
+        
         <div className="space-y-2">
           <Label htmlFor="to-address">Recipient Address</Label>
           <Input
@@ -184,7 +218,7 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
             min="0"
             placeholder="0.01"
             value={amount}
-            onChange={(e) => setAmount(parseInt(e.target.value))}
+            onChange={(e) => setAmount(Number(e.target.value))}
           />
         </div>
         
@@ -204,7 +238,7 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
         <Button
           onClick={sendTransaction}
           className="w-full"
-          disabled={isLoading}
+          disabled={isLoading || !toAddress || amount <= 0}
         >
           {isLoading ? 'Processing...' : 'Send Transaction'}
         </Button>
