@@ -48,6 +48,7 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
         const web3Provider = await metakeepInstance.ethereum;
         const web3Instance = new Web3(web3Provider);
 
+        //@ts-ignore
         const accounts = await web3Instance.eth.getAccounts();
         console.log(accounts, 'accounts');
         
@@ -128,7 +129,7 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
       console.log(web3Accounts);
       
       const nonce = await web3.eth.getTransactionCount(
-        web3Accounts['wallets']['ethAddress'],
+        web3Accounts['wallet']['ethAddress'],
         'latest'
       );
 
