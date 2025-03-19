@@ -41,7 +41,6 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
         const metakeepInstance = new MetaKeep({
           appId: '9cc98bca-da35-4da8-8f10-655b3e51cb9e',
           chainId,
-          environment: 'dev',
           rpcNodeUrls: { [chainId]: getRpcUrlForChain(chainId) },
         });
 
