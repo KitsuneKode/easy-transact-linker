@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Card,
   CardContent,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { MetaKeep } from 'metakeep';
-import Web3, { Address } from 'web3';
 import { logTransactionEvent } from '@/lib/metakeep';
+import { MetaKeep } from 'metakeep';
+import React, { useEffect, useState } from 'react';
+import Web3 from 'web3';
 
 interface SimpleWalletProps {
   transactionDetails?: {
@@ -26,8 +26,6 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
   const [response, setResponse] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [amount, setAmount] = useState(0);
-  const [toAddress, setToAddress] = useState('');
   const [metaKeep, setMetaKeep] = useState(null);
   const [web3, setWeb3] = useState(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -113,12 +111,14 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
 
     // Log transaction execution start
     logTransactionEvent('transaction_execution_start', {
-      toAddress,
-      amount,
+      to: transactionDetails?.functionInputs._to,
+      value: transactionDetails?.functionInputs._value,
       chainId: transactionDetails?.chainId
     });
 
     try {
+      const to= transactionDetails?.functionInputs._to;
+      const value= transactionDetails?.functionInputs._value;
       const chainId = transactionDetails?.chainId;
       const gas = transactionDetails?.functionInputs.gas;
       const maxgas = transactionDetails?.functionInputs.maxgas;
@@ -135,8 +135,8 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
       const txObj = {
         type: 2,
         from: web3Accounts['wallets']['ethAddress'],
-        to: toAddress,
-        value: web3.utils.toWei(amount.toString(), 'ether'),
+        to,
+        value: web3.utils.toWei(value.toString(), 'ether'),
         nonce,
         data: '0x0123456789',
         gas,
@@ -145,14 +145,15 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
         chainId,
       };
 
+      console.log(txObj);
       const result = await metaKeep.signTransaction(txObj, 'reason');
 
       setResponse(JSON.stringify(result, null, 2));
       
       // Log successful transaction
       logTransactionEvent('transaction_success', {
-        toAddress,
-        amount,
+        to,
+        value,
         chainId: transactionDetails?.chainId,
         transactionHash: result.transactionHash
       });
@@ -170,8 +171,8 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
       
       // Log transaction error
       logTransactionEvent('transaction_error', {
-        toAddress,
-        amount,
+        to: transactionDetails?.functionInputs._to,
+      value: transactionDetails?.functionInputs._value,
         chainId: transactionDetails?.chainId,
         error: (error as Error).message
       });
@@ -204,20 +205,16 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
           <Input
             id="to-address"
             placeholder="0x..."
-            value={toAddress}
-            onChange={(e) => setToAddress(e.target.value)}
+            disabled
+            value={transactionDetails.functionInputs._to}
           />
         </div>
         <div className="space-y-2">
           <Label htmlFor="amount">Amount (in ETH/MATIC)</Label>
           <Input
             id="amount"
-            type="number"
-            step="0.0001"
-            min="0"
-            placeholder="0.01"
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
+            disabled
+            value={transactionDetails.functionInputs._value}
           />
         </div>
         
@@ -237,7 +234,7 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
         <Button
           onClick={sendTransaction}
           className="w-full"
-          disabled={isLoading || !toAddress || amount <= 0}
+          disabled={isLoading}
         >
           {isLoading ? 'Processing...' : 'Send Transaction'}
         </Button>
