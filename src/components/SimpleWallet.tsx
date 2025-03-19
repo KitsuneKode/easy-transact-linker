@@ -135,7 +135,7 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
 
       const txObj = {
         type: 2,
-        from: web3Accounts['wallets']['ethAddress'],
+        from: web3Accounts['wallet']['ethAddress'],
         to,
         value: web3.utils.toWei(value.toString(), 'ether'),
         nonce,
