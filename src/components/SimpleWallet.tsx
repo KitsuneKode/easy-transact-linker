@@ -18,6 +18,7 @@ interface SimpleWalletProps {
   transactionDetails?: {
     contractAddress: string;
     chainId: number;
+    functionName: string;
     functionInputs: { [key: string]: string };
   };
 }
@@ -27,7 +28,7 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [metaKeep, setMetaKeep] = useState(null);
-  const [web3, setWeb3] = useState(null);
+  const [web3, setWeb3] = useState<Web3>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   // Initialize MetaKeep SDK
@@ -126,11 +127,9 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
     try {
       const to = transactionDetails?.functionInputs._to;
       const value = transactionDetails?.functionInputs._value;
-      const chainId = transactionDetails?.chainId;
       const gas = transactionDetails?.functionInputs.gas;
       const maxgas = transactionDetails?.functionInputs.maxgas;
       const maxpriogas = transactionDetails?.functionInputs.maxpriogas;
-      
       const web3Accounts = await metaKeep.getWallet();
 
       
@@ -139,24 +138,24 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
         'latest'
       );
       
-      const nonce = Number(nonceValue);
 
       const txObj = {
-        type: 2,
-        from: web3Accounts['wallet']['ethAddress'],
         to,
-        value: value,
-        nonce,
-        data: '0x0123456789',
-        gas: Number(gas),
-        maxFeePerGas: Number(maxgas),
-        maxPriorityFeePerGas: Number(maxpriogas),
-        chainId,
+        from: web3Accounts['wallet']['ethAddress'],
+        value: "0x2710",
+        nonce: "0x1",
+        data: "0x0123456789",
+        gas: 23,
+        maxFeePerGas: 1000,
+        maxPriorityFeePerGas: 999,
+        chainId: 137,
       };
 
       console.log(txObj);
-      const result = await metaKeep.signTransaction(txObj, 'reason');
+      const result = await metaKeep.signTransaction(txObj, `invoking the function ${transactionDetails?.functionName}`);
       
+
+      // const result = await web3.eth.sendTransaction(txObj, web3Accounts['wallet']['ethAddress'] )
       console.log(result);
       
       const safeResult = safeBigIntToJSON(result);
@@ -178,7 +177,7 @@ const SimpleWallet: React.FC<SimpleWalletProps> = ({ transactionDetails }) => {
         )}...`,
       });
     } catch (error) {
-      console.error('Transaction error:', error);
+      console.error('Transaction error:', error.message);
       setError(error.message || 'Transaction failed');
       
       logTransactionEvent('transaction_error', {
