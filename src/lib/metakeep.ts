@@ -100,7 +100,7 @@ export const logTransactionEvent = async (event: string, data: any) => {
 // Record analytics event to backend
 export const recordAnalyticsEvent = async (data: any) => {
   try {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const apiUrl = import.meta.env.API_URL || 'http://localhost:3001';
     await fetch(`${apiUrl}/api/eventlog`, {
       method: 'POST',
       headers: {
@@ -121,7 +121,7 @@ export const recordAnalyticsEvent = async (data: any) => {
 // Record page load event specifically
 export const recordPageLoadToBackend = async (data: any) => {
   try {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const apiUrl = import.meta.env.API_URL || 'http://localhost:3001';
     await fetch(`${apiUrl}/api/analytics/pageload`, {
       method: 'POST',
       headers: {
@@ -138,7 +138,7 @@ export const recordPageLoadToBackend = async (data: any) => {
 // Get analytics data from backend API
 export const getAnalyticsData = async () => {
   try {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const apiUrl = import.meta.env.API_URL || 'http://localhost:3001';
     const response = await fetch(`${apiUrl}/api/analytics/pageloads`);
     
     if (!response.ok) {
